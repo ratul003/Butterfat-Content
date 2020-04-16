@@ -1,0 +1,295 @@
+```{r,warning=FALSE,message=FALSE,echo=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(knitr)
+library(alr4)
+library(ggplot2)
+library(faraway)
+#library(kableExtra)
+library(dplyr)
+library(tidyverse)
+library(lme4)
+library(gmodels)
+library(emmeans)
+```
+
+### Project Description
+
+This project concerns milk butterfat levels in dairy cows.  Primary interest is in identifying the breeds of cow that produce milk with the highest levels of butterfat. Higher butterfat is better for butter, cheese, and ice cream production.  A difficulty in identifying the best breed(s) is that butterfat levels also depend on the age of the cow.  In this study there are two age groups: cows that are 2 years old, and cows that are classified as 'mature' which means greater than four years old.
+
+Use examples and content learned in the course to analyze these data. The final product of your work should be a clearly written summary of your findings.
+
+### Process Data
+
+Random samples of ten mature (five-year-old and older) and ten two-year-old cows were taken from each of five breeds. The average butterfat percentage of these 100 cows is stored in the variable butterfat with the type of cow stored in the variable breed and the age of the cow stored in the variable age.  The following code block changes the long name 'Holstein-Fresian' to 'H-F'.
+
+```{r,echo=FALSE}
+# This block reads and processes data, please don't alter this block
+data(butterfat)
+levels(butterfat$Breed)[levels(butterfat$Breed)=="Holstein-Fresian"]<-"H-F"
+summary(butterfat)
+str(butterfat)
+```
+
+
+\clearpage
+
+### Descriptive Numerical and Graphical Analysis
+
+#### Summary Statistics
+
+```{r,echo=FALSE}
+mytable=butterfat%>%group_by(Breed,Age)%>%summarise (Avg_Butterfat=mean(Butterfat),Standard_Deviation=sd(Butterfat),Number_of_Observation=n())
+kable(mytable)
+```
+\clearpage
+
+Discussion 
+
+From the summary table we can tell the following:
+  
+  - Jersey produces the most yield of butterfat. On the sublevels of age for Jersey, Mature produces the most out of different levels of age category.
+
+- H-F produces the least yield of butterfield. On the sublevels of age for H-F, Mature produces slightly more than 2year category of age.
+
+- Overall, for different types of Breed, Mature produces on an average more yield than 2year expect for Canadian where 2year produces more yield of butterfat than Mature.
+
+#### GGPlots
+```{r}
+p<-ggplot(data=butterfat,aes(x=Breed,y=Butterfat,group=Age,colour=Age))
+p+geom_point(size=1.5)+geom_line()+scale_colour_hue("Age",breaks=c("2year","Mature"))+ xlab("Bread")+ylab("Butterfat")
+
+p1<-ggplot(data=butterfat,aes(x=Age,y=Butterfat,group=Breed,colour=Breed))
+p1+geom_point(size=1.5)+geom_line()+scale_colour_hue("Breed",                                                  breaks=c("Ayrshire","Canadian","Guernsey","H-F","Jersey"))+ xlab("Age")+ylab("Butterfat")
+
+
+p3<-ggplot(data=butterfat,aes(x=Breed,y=Butterfat,colour=Breed))
+p3+geom_point(size=1.5)+geom_line()+facet_wrap(~Age)+xlab("Breed")+ylab("Butterfat")
+
+p4<-ggplot(data=butterfat,aes(x=Breed,y=Butterfat))
+p4<-p4+geom_point(aes(group=Age,fill=Age),position=position_jitterdodge(dodge.width = 0.90))
+p4+geom_boxplot(aes(fill=Age),outlier.colour=NA,alpha=0.50,position=position_dodge(width=0.90))+
+  xlab("Breed")+ylab("Butterfat")+
+  guides(fill=guide_legend(title="Age"))
+```
+
+
+Discussion 
+
+From the GGplots we can tell the following:
+  
+  - GGplot1: Overall, Jersey produces the most yield of butterfat compared to other types of breed. H-F seems to produce the least yield of butterfat. However, the trend line showes that Mature cows of all different typs of breed produces more yield of butterfat compared to 2year cows except Canadian cows where 2year produces more yield than Mature cows.
+
+- Boxplot: Jersey produces the most yield of butterfat and on sublevel Mature Jersey cows produces more butterfat than 2year old cows. H-F produces the least yield of butterfat. For breeds: Ayrshire, Guernsey and Jersey, it's very obvious that Mature cows produces more yield than 2year cows. For breeds: Canadian, H-F and Guernsey its hard to deduce whether there is significant difference in yield varying with age levels.
+
+### Model Specification
+
+
+
+```{r}
+aov1<-aov(Butterfat~Breed+Age+Breed:Age,data=butterfat)
+summary(aov1)
+confint(aov1)
+m1<-lm(Butterfat~Breed+Age+Breed:Age,data=butterfat)
+summary(m1)
+confint(m1)
+```
+
+\clearpage
+
+Discussion on the model selection:
+
+We have tried 2 different types of modeling:
+(1) Anova model with and without interaction term
+(2) Linear model with and without the interaction term 
+
+Initially, we tested the models to see if we require an interaction term and later compared the both models (aov1 and aov2) and (m1,m2) to see which models fits well with the analysis.
+
+Hypothesis test for the anova model interaction term:
+NH: interaction term is zero
+AH: interaction term is not zero
+F-stat: 0.742
+P-value: 0.566
+Conclusion: A big p-value (p>0.05) indicates we have no evidence to doubt the NH and strong evidence to doubt the AH. In conclusion, we can tell that from the small F-stat and big p-value that there is no evidence that the yield of butterfat has any interacting effects of type of breed at diffent age levels of the cows.
+
+Hypothesis test for the anova model Age term:
+NH: Age coefficient is zero
+AH: Age coefficient is not zero
+F-stat: 1.580
+P-value: 0.212
+Conclusion: A big p-value (p>0.05) indicates we have no evidence to doubt the NH and strong evidence to doubt the AH. In conclusion, we can tell that from the small F-stat and big p-value that there is no evidence that the yield of butterfat has any age effects at different levels of age.
+
+Hypothesis test for the anova model Breed term:
+NH: Breed coefficient is zero
+AH: Breed coefficient is not zero
+F-stat: 49.565
+P-value: <2e-16
+Conclusion: A very small p-value (p<0.05) indicates we have strong evidence to doubt the NH and strong evidence for the AH. In conclusion, we can tell that from the big F-stat and small p-value that there is strong evidence that the yield of butterfat differs at different types of breed of cows and the differences are statistically signifcant.
+
+Moreover, from the confidence interval test we can tell that all the interaction terms have plausible values containing zero. Hence the effects are statistically insignificant. The AgeMature have plausible values containing zero, hence the effect of age on yield of butterfat is statistically insignificant.
+
+
+
+```{r,warning=FALSE,message=FALSE}
+plot(allEffects(m1))
+plot(effect(c("Age","Breed"),m1,x.var="Age"))
+```
+
+
+Discussion on the effects plot:
+
+- From the interaction effects plot, we can tell there isn't much difference in yield of butterfat across different levels of age of cows.
+
+- There maybe significant difference in yields of butterfat at different levels of breed of cows as they trend is non-parallel.
+
+
+```{r}
+aov2<-aov(Butterfat~Breed+Age,data=butterfat)
+summary(aov2)
+m2<-lm(Butterfat~Breed+Age,data=butterfat)
+summary(m2)
+
+plot(allEffects(m2))
+plot(effect(c("Age","Breed"),m2,x.var="Age"))
+emmip(m2, Breed ~ Age)
+anova(aov2,aov1)
+anova(m2,m1)
+
+```
+
+Discussion on the models without the interaction term:
+  
+  - From the coefficients of the regression model, we can tell that effects of different levels of breed of cows are statistically significant (small p-value). All of them have positive effect on the butterfat yield except Breed H-F. The effect of 2year is statistically significant, however the effect of AgeMature seems statistically insignificant.
+
+Discussion on the Model comparison test:
+  
+  NH: Butterfat ~ Breed + Age
+AH: Butterfat ~ Breed + Age + Breed:Age
+F-stat: 0.74
+P-value: 0.57
+Conclusion: A big p-value (p>0.05) indicates we have no evidence to doubt the NH and strong evidence to doubt the AH. In conclusion, we can tell that from the small F-stat and big p-value that there is no evidence that the yield of butterfat has any interaction effects of Breed and Age on the yield of butterfat.
+
+
+### Analysis of Effects
+
+#### sjPlot Usage
+
+
+```{r,warning=FALSE,echo=FALSE,message=FALSE}
+library(sjPlot)
+library(sjmisc)
+library(sjlabelled)
+plot_model(m2,type="pred",terms=c("Breed","Age"))
+plot_model(m2,type="pred",terms=c("Age","Breed"))
+#tab_model(m2)
+
+
+```
+
+- Again from the sj plots, we can tell there isn't any significant difference in yield of butterfat amongs the different age groups of the cows, however, there is significant difference in yield across different types of breed.
+
+
+#### Pairwise Analysis of Effects
+
+
+Anova model 2 (aov2) will be used to do the comparisons 
+```{r}
+TukeyHSD(aov2,"Breed",ordered=T)
+TukeyHSD(aov2,"Age",ordered=T)
+```
+
+Discussion on the TukeyHSD test:
+
+- From the output, we can tell that there are difference in yield between at different levels on the cows and the differences are statistically significant. However, there is some evidence that difference in yield between Jersey and Guernsey may not be statistically insignificant.
+
+- From the output, we can definitely tell from the large p-value (p>0.05) that there is very strong evidence that there is no difference in yield of butterfat across age groups and the difference in yield is statistically insignificant.
+
+
+#### Using the EMMEANS Package
+```{r}
+comparisons<-emmeans(m2,~Breed|Age)
+pairs(comparisons)
+```
+
+Discussion on the emmeans package output:
+
+Comparisons of yield of butterfat at different levels of breed at Age= 2year and Mature.
+
+- Canadian cows produces on an average 0.379 more yield of butterfat than Ayrshire cows and the difference is statistically significant.
+- Guernsey cows produces on an average 0.890 more yield of butterfat than Ayrshire cows and the difference in statistically significant.
+- Ayrshire cows produces on an average 0.391 more yield of butterfat than H-F cows and the difference in statistically significant.
+- Jersey cows produces on an average 1.232 more yield of butterfat than Ayrshire cows and the difference in statistically significant.
+- Guernsey cows produces on an average 0.511 more yield of butterfat than Canadian cows and the difference in statistically significant.
+- Canadian cows produces on an average 0.769 more yield of butterfat than H-F cows and the difference in statistically significant.
+- Jersey cows produces on an average 0.854 more yield of butterfat than Canadian cows and the difference in statistically significant.
+- Guernsey cows produces on an average 1.280 more yield of butterfat than H-F cows and the difference in statistically significant.
+- Jersey cows produces on an average 0.343 more yield of butterfat than Guernsey cows and the difference in statistically insignificant.
+- Jersey cows produces on an average 1.623 more yield of butterfat than H-F cows and the difference in statistically significant.
+
+
+
+```{r}
+confint(contrast(comparisons,method="pairwise"))
+```
+
+```{r}
+CLD(comparisons,alpha=0.05)
+```
+
+From the CLD output, we can tell that Jersey and Guernsey are not different from each other in terms of producing yield of butterfat across different levels of age.
+
+
+\clearpage
+
+### Model Assessment
+
+#### Residual Plot for linear model
+
+```{r}
+resids1<-resid(m2)
+fittedvals1<-fitted(m2)
+mydataframe1<-data.frame(butterfat,resids1,fittedvals1)
+p6<-ggplot(data=butterfat,aes(x=fittedvals1,y=resids1))
+p6+geom_point(aes(colour=Breed),size=1.5)+geom_hline(yintercept = 0)+facet_wrap(~Age)+
+scale_colour_hue("Breed",
+breaks=c("Ayrshire","Canadian","Guernsey","H-F","Jersey"))+
+xlab("Predicted Value") +ylab("Residuals")
+
+p7<- ggplot(data = butterfat, aes(x = fittedvals1, y = resids1))
+p7 + geom_point(aes(colour=Breed),size = 1.5) + geom_smooth(se=TRUE,span=.75) +
+geom_hline(yintercept=0) + 
+scale_colour_hue("Breed",
+breaks=c("Ayrshire","Canadian","Guernsey","H-F","Jersey"))+
+xlab("Predicted Value") + ylab("Residuals")
+
+```
+
+#### Residual Plot for Anova model
+
+```{r}
+resids2<-resid(aov2)
+fittedvals2<-fitted(aov2)
+mydataframe2<-data.frame(butterfat,resids2,fittedvals2)
+p8<-ggplot(data=butterfat,aes(x=fittedvals2,y=resids2))
+p8+geom_point(aes(colour=Breed),size=1.5)+geom_hline(yintercept = 0)+facet_wrap(~Age)+
+scale_colour_hue("Breed",
+breaks=c("Ayrshire","Canadian","Guernsey","H-F","Jersey"))+
+xlab("Predicted Value") +ylab("Residuals")
+
+p9<- ggplot(data = butterfat, aes(x = fittedvals2, y = resids2))
+p9 + geom_point(aes(colour=Breed),size = 1.5) + geom_smooth(se=TRUE,span=.75) +
+geom_hline(yintercept=0) + 
+scale_colour_hue("Breed",
+breaks=c("Ayrshire","Canadian","Guernsey","H-F","Jersey"))+
+xlab("Predicted Value") + ylab("Residuals")
+
+```
+
+Discussion of the Residual plots:
+
+- The residual plots for both anova and linear models shows no curvature or signs of outliers in the model. Hence, its safe to say that the model fits well with the data.
+
+\clearpage
+
+### Conclusions
+
+In order to produce the most yield of butterfat for the existing cows, the farmers should focus on the cows that belong from the Jersey breed and are either matured or 2year. The farmers should try to avoid cows from H-F breed regardless their age levels as they produce the least yield of butterfat. Having said that, there aren't any differences in yield of butterfat across age levels of the cows.
